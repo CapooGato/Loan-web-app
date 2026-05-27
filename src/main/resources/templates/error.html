@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Blad</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<h1>Wystapil blad</h1>
+<p th:if="${errorMessage}" class="error" th:text="${errorMessage}"></p>
+<p th:if="${message}" class="error" th:text="${message}"></p>
+<a href="/">Powrot do strony glownej</a>
+</body>
+</html>

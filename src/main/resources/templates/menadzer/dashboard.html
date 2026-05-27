@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Panel menadzera</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<h1>Panel menadzera</h1>
+<p>Zalogowany jako: <strong sec:authentication="name"></strong> (MENADZER)</p>
+
+<div th:if="${success}" class="success" th:text="${success}"></div>
+<div th:if="${error}" class="error" th:text="${error}"></div>
+
+<h2>Historia wszystkich pozyczek</h2>
+<table th:if="${!loans.isEmpty()}">
+    <tr>
+        <th>ID</th>
+        <th>Klient</th>
+        <th>Kwota</th>
+        <th>Oprocentowanie</th>
+        <th>Okres</th>
+        <th>Rata miesieczna</th>
+        <th>Lacznie do splaty</th>
+        <th>Odsetki</th>
+        <th>Status</th>
+        <th>Udzielona przez</th>
+        <th>Data</th>
+        <th>Zmien oprocentowanie</th>
+    </tr>
+    <!--
+        TODO 25: Dodaj iteracje po liscie pozyczek i formularz zmiany oprocentowania.
+        Uzyj: <tr th:each="loan : ${loans}">
+        Dla kazdej pozyczki wyswietl w <td>:
+          - #strings.abbreviate(loan.id, 8)
+          - loan.borrowerUsername
+          - loan.amount (sformatowana + ' PLN')
+          - loan.annualInterestRate + '%'
+          - loan.termMonths + ' mies.'
+          - loan.monthlyPayment (sformatowana + ' PLN')
+          - loan.totalAmount (sformatowana + ' PLN')
+          - loan.totalInterest (sformatowana + ' PLN')
+          - loan.status
+          - loan.grantedBy
+          - loan.createdAt (sformatowana)
+          - Formularz zmiany oprocentowania:
+            <form th:action="@{/menadzer/change-rate}" method="post">
+              <input type="hidden" name="loanId" th:value="${loan.id}"/>
+              <input type="number" name="newRate" step="0.01" min="0" max="100" th:value="${loan.annualInterestRate}"/>
+              <button type="submit">Zmien</button>
+            </form>
+    -->
+    <tr th:each="loan : ${loans}">
+        <td th:text="${#strings.abbreviate(loan.id, 8)}"></td>
+        <td th:text="${loan.borrowerUsername}"></td>
+        <td th:text="${#numbers.formatDecimal(loan.amount, 2, 2)} + ' PLN'"></td>
+        <td th:text="${loan.annualInterestRate} + '%'"></td>
+        <td th:text="${loan.termMonths} + ' mies'"></td>
+        <td th:text="${#numbers.formatDecimal(loan.monthlyPayment, 2, 2)} + ' PLN'"></td>
+        <td th:text="${#numbers.formatDecimal(loan.totalAmount, 2, 2)} + ' PLN'"></td>
+        <td th:text="${#numbers.formatDecimal(loan.totalInterest, 2 ,2)} + ' PLN'"></td>
+        <td th:text="${loan.status}"></td>
+        <td th:text="${loan.grantedBy}"></td>
+        <td th:text="${#temporals.format(loan.createdAt, 'yyyy-MM-dd HH:mm')}"></td>
+        <td>
+            <form th:action="@{/menadzer/change-rate}" method="post">
+                <input type="hidden" name="loanId" th:value="${loan.id}"/>
+                <input type="number" name="newRate" step="0.01" min="0" max="100" th:value="${loan.annualInterestRate}"/>
+                <button type="submit">Zmien</button>
+            </form>
+        </td>
+    </tr>
+</table>
+<p th:if="${loans.isEmpty()}">Brak pozyczek w systemie.</p>
+
+<form th:action="@{/logout}" method="post" style="margin-top:30px;">
+    <button type="submit" class="danger">Wyloguj</button>
+</form>
+</body>
+</html>

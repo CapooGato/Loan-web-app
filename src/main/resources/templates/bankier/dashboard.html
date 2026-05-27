@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Panel bankiera</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<h1>Panel bankiera</h1>
+<p>Zalogowany jako: <strong sec:authentication="name"></strong> (BANKIER)</p>
+
+<div class="success" th:if="${success}" th:text="${success}"></div>
+<div class="error" th:if="${error}" th:text="${error}"></div>
+
+<h2>Konta klientow</h2>
+<table th:if="${!accounts.isEmpty()}">
+    <tr>
+        <th>Uzytkownik</th>
+        <th>Saldo</th>
+    </tr>
+    <tr th:each="acc : ${accounts}">
+        <td th:text="${acc.username}"></td>
+        <td th:text="${#numbers.formatDecimal(acc.balance, 1, 2)} + ' PLN'"></td>
+    </tr>
+</table>
+<p th:if="${accounts.isEmpty()}">Brak kont klientow.</p>
+
+<!--
+    TODO 22: Utworz formularz wplaty na konto klienta.
+    - Formularz POST kierujacy na /bankier/deposit (th:action="@{/bankier/deposit}")
+    - Select z nazwa "username" - iteruj po accounts:
+      <option th:each="acc : ${accounts}" th:value="${acc.username}" th:text="${acc.username}">
+    - Pole input typu number o nazwie "amount" (step="0.01", min="0.01", required)
+    - Przycisk "Wplac"
+-->
+<form method="post" th:action="@{/bankier/deposit}">
+    <label for="accountsDeposit">Wybierz konto</label>
+    <select id="accountsDeposit" name="username">
+        <option th:each="acc : ${accounts}" th:text="${acc.username}" th:value="${acc.username}">
+    </select>
+    <label for="amountDeposit">Kwota wplaty</label>
+    <input id="amountDeposit" min="0.01" name="amount" required step="0.01" type="number">
+    <button type="submit">Wplac</button>
+</form>
+
+<!--
+    TODO 23: Utworz formularz wyplaty z konta klienta (analogicznie do wplaty).
+    - Formularz POST kierujacy na /bankier/withdraw
+    - Select z nazwa "username" (tak samo jak wyzej)
+    - Pole input "amount"
+    - Przycisk "Wyplac"
+-->
+<form method="post" th:action="@{/bankier/withdraw}">
+    <label for="accountsWithdraw">Wybierz konto</label>
+    <select id="accountsWithdraw" name="username">
+        <option th:each="acc : ${accounts}" th:text="${acc.username}" th:value="${acc.username}">
+    </select>
+    <label for="amountWithdraw">Kwota wyplaty</label>
+    <input id="amountWithdraw" min="0.01" name="amount" required step="0.01" type="number">
+    <button type="submit">Wyplac</button>
+</form>
+<!--
+    TODO 24: Utworz formularz udzielenia pozyczki.
+    - Formularz POST kierujacy na /bankier/grant-loan
+    - Select z nazwa "username" (wybor klienta)
+    - Pole input "amount" (kwota pozyczki)
+    - Pole input "interestRate" (oprocentowanie roczne w %, step="0.01", min="0", max="100")
+    - Pole input "termMonths" (okres w miesiacach, min="1")
+    - Przycisk "Udziel pozyczki"
+-->
+<form method="post" th:action="@{/bankier/grant-loan}">
+    <label for="accountsGrantLoan">Wybierz konto</label>
+    <select id="accountsGrantLoan" name="username">
+        <option th:each="acc : ${accounts}" th:text="${acc.username}" th:value="${acc.username}">
+    </select>
+    <label for="amountGrantLoan">Kwota pozyczki</label>
+    <input id="amountGrantLoan" name="amount" min="0.01" required step="0.01" type="number">
+    <br>
+    <label for="amountInterestRateGrantLoan">Oprocentowanie roczne w %</label>
+    <input id="amountInterestRateGrantLoan" name="interestRate" min="0.01" max="100" required step="0.01" type="number">
+
+    <label for="termMonthsGrantLoan">Okres w miesiacach</label>
+    <input id="termMonthsGrantLoan" name="termMonths" min="1" type="number" required>
+    <button type="submit">Udziel pozyczki</button>
+</form>
+
+<h2>Wszystkie pozyczki</h2>
+<table th:if="${!loans.isEmpty()}">
+    <tr>
+        <th>Klient</th>
+        <th>Kwota</th>
+        <th>Oprocentowanie</th>
+        <th>Okres</th>
+        <th>Rata</th>
+        <th>Lacznie</th>
+        <th>Status</th>
+        <th>Data</th>
+    </tr>
+    <tr th:each="loan : ${loans}">
+        <td th:text="${loan.borrowerUsername}"></td>
+        <td th:text="${#numbers.formatDecimal(loan.amount, 1, 2)} + ' PLN'"></td>
+        <td th:text="${loan.annualInterestRate} + '%'"></td>
+        <td th:text="${loan.termMonths} + ' mies.'"></td>
+        <td th:text="${#numbers.formatDecimal(loan.monthlyPayment, 1, 2)} + ' PLN'"></td>
+        <td th:text="${#numbers.formatDecimal(loan.totalAmount, 1, 2)} + ' PLN'"></td>
+        <td th:text="${loan.status}"></td>
+        <td th:text="${#temporals.format(loan.createdAt, 'yyyy-MM-dd HH:mm')}"></td>
+    </tr>
+</table>
+<p th:if="${loans.isEmpty()}">Brak pozyczek w systemie.</p>
+
+<form method="post" style="margin-top:30px;" th:action="@{/logout}">
+    <button class="danger" type="submit">Wyloguj</button>
+</form>
+</body>
+</html>

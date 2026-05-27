@@ -1,0 +1,160 @@
+default:
+  image: eclipse-temurin:21-jdk
+  before_script:
+    - chmod +x mvnw
+
+workflow:
+  rules:
+    - when: always
+
+stages:
+  - build
+  - test
+  - quality
+  - security
+  - summary
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end"
+  APP_VERSION: "1.0.${CI_PIPELINE_IID}"
+
+compile:
+  stage: build
+  cache:
+    key: maven-${CI_COMMIT_REF_SLUG}
+    paths:
+      - .m2/repository/
+    policy: pull-push
+  script:
+    - ./mvnw $MAVEN_CLI_OPTS clean package -DskipTests
+  artifacts:
+    paths:
+      - target/*.jar
+      - target/classes/
+    expire_in: 2 hours
+
+unit-tests:
+  stage: test
+  needs: [compile]
+  cache:
+    key: maven-${CI_COMMIT_REF_SLUG}
+    paths:
+      - .m2/repository/
+    policy: pull
+  script:
+    - ./mvnw $MAVEN_CLI_OPTS test
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports/
+      - target/site/jacoco/
+    reports:
+      junit: target/surefire-reports/TEST-*.xml
+  coverage: '/Total.*?([0-9]{1,3})%/'
+
+sonarqube:
+  stage: quality
+  needs: [unit-tests]
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+    GIT_DEPTH: 0
+  cache:
+    key: sonar-${CI_COMMIT_REF_SLUG}
+    paths:
+      - .sonar/cache
+      - .m2/repository/
+  script:
+    - mkdir -p src/test/java
+    - >-
+      ./mvnw $MAVEN_CLI_OPTS verify sonar:sonar
+      -Dsonar.host.url=$SONAR_HOST_URL
+      -Dsonar.token=$SONAR_TOKEN
+      -Dsonar.projectKey=$CI_PROJECT_NAME
+      -Dsonar.projectName=$CI_PROJECT_NAME
+      -Dsonar.qualitygate.wait=true
+      -Dsonar.qualitygate.timeout=300
+      -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+      -Dsonar.java.binaries=target/classes
+      -Dsonar.sources=src/main/java
+      -Dsonar.tests=src/test/java
+  allow_failure: true
+
+sast-semgrep:
+  stage: security
+  image: returntocorp/semgrep:latest
+  before_script: []
+  cache: []
+  needs: []
+  script:
+    - semgrep scan --config auto --config p/java --config p/spring --config p/owasp-top-ten --json -o semgrep-report.json src/ || true
+    - semgrep scan --config auto --config p/java --config p/spring --config p/owasp-top-ten --sarif -o semgrep-report.sarif src/ || true
+  artifacts:
+    when: always
+    paths:
+      - semgrep-report.json
+      - semgrep-report.sarif
+  allow_failure: true
+
+dependency-scan:
+  stage: security
+  image:
+    name: ghcr.io/aquasecurity/trivy:latest
+    entrypoint: [""]
+  before_script: []
+  cache: []
+  needs: []
+  script:
+    - trivy fs --scanners vuln --severity HIGH,CRITICAL --format table .
+    - trivy fs --scanners vuln --severity HIGH,CRITICAL --format json --output trivy-report.json .
+  artifacts:
+    when: always
+    paths:
+      - trivy-report.json
+  allow_failure: true
+
+secret-detection:
+  stage: security
+  image:
+    name: zricethezav/gitleaks:latest
+    entrypoint: [""]
+  before_script: []
+  cache: []
+  needs: []
+  script:
+    - gitleaks detect --source=. --report-format=json --report-path=gitleaks-report.json --verbose
+  artifacts:
+    when: always
+    paths:
+      - gitleaks-report.json
+  allow_failure: false
+
+pipeline-summary:
+  stage: summary
+  needs:
+    - job: unit-tests
+      artifacts: true
+      optional: true
+    - job: sonarqube
+      artifacts: true
+      optional: true
+    - job: sast-semgrep
+      artifacts: true
+      optional: true
+    - job: dependency-scan
+      artifacts: true
+      optional: true
+    - job: secret-detection
+      artifacts: true
+      optional: true
+  script:
+    - |
+      echo "========== PIPELINE SUMMARY v${APP_VERSION} =========="
+      echo "Branch: ${CI_COMMIT_REF_NAME} | Commit: ${CI_COMMIT_SHORT_SHA}"
+      echo ""
+      if [ -d target/surefire-reports ]; then
+        TESTS=$(grep -h 'testsuite' target/surefire-reports/TEST-*.xml 2>/dev/null | grep -oP 'tests="\K[0-9]+' | paste -sd+ | bc 2>/dev/null || echo "?")
+        FAILURES=$(grep -h 'testsuite' target/surefire-reports/TEST-*.xml 2>/dev/null | grep -oP 'failures="\K[0-9]+' | paste -sd+ | bc 2>/dev/null || echo "?")
+        echo "Tests: ${TESTS} | Failures: ${FAILURES}"
+      fi
+  allow_failure: true

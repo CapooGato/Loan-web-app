@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Panel uzytkownika</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<h1>Panel uzytkownika</h1>
+<p>Zalogowany jako: <strong sec:authentication="name"></strong> (USER)</p>
+
+<!--
+    TODO 15: Wyswietl komunikaty sukcesu i bledu.
+    Dodaj dwa divy:
+    - div z class="success", widoczny gdy istnieje atrybut "success", wyswietlajacy jego tresc
+      Uzyj: th:if="${success}" i th:text="${success}"
+    - div z class="error", widoczny gdy istnieje atrybut "error", wyswietlajacy jego tresc
+      Uzyj: th:if="${error}" i th:text="${error}"
+-->
+
+<h2>Saldo konta</h2>
+<!--
+    TODO 16: Wyswietl saldo konta w formacie "XXXX.XX PLN"
+    Uzyj tagu <p> z class="balance" i atrybutem:
+    th:text="${#numbers.formatDecimal(account.balance, 1, 2)} + ' PLN'"
+-->
+
+<h2>Wplata</h2>
+<!--
+    TODO 17: Utworz formularz wplaty.
+    - Formularz POST kierujacy na /user/deposit
+      Uzyj: th:action="@{/user/deposit}" method="post"
+    - Pole input typu number o nazwie "amount" (step="0.01", min="0.01", required)
+    - Przycisk "Wplac"
+    Uwaga: Thymeleaf automatycznie doda token CSRF przy uzyciu th:action
+-->
+
+<h2>Wyplata</h2>
+<!--
+    TODO 18: Utworz formularz wyplaty (analogicznie do wplaty).
+    - Formularz POST kierujacy na /user/withdraw
+      Uzyj: th:action="@{/user/withdraw}" method="post"
+    - Pole input typu number o nazwie "amount" (step="0.01", min="0.01", required)
+    - Przycisk "Wyplac"
+-->
+
+<h2>Moje pozyczki</h2>
+<table th:if="${!loans.isEmpty()}">
+    <tr>
+        <th>Kwota</th>
+        <th>Oprocentowanie</th>
+        <th>Okres (mies.)</th>
+        <th>Rata miesieczna</th>
+        <th>Laczna kwota</th>
+        <th>Odsetki</th>
+        <th>Status</th>
+        <th>Data</th>
+    </tr>
+    <!--
+        TODO 19: Dodaj iteracje po liscie pozyczek.
+        Uzyj: <tr th:each="loan : ${loans}">
+        Dla kazdej pozyczki wyswietl w <td>:
+          - loan.amount (sformatowana: #numbers.formatDecimal(loan.amount, 1, 2) + ' PLN')
+          - loan.annualInterestRate + '%'
+          - loan.termMonths
+          - loan.monthlyPayment (sformatowana + ' PLN')
+          - loan.totalAmount (sformatowana + ' PLN')
+          - loan.totalInterest (sformatowana + ' PLN')
+          - loan.status
+          - loan.createdAt (sformatowana: #temporals.format(loan.createdAt, 'yyyy-MM-dd HH:mm'))
+    -->
+</table>
+<p th:if="${loans.isEmpty()}">Brak pozyczek.</p>
+
+<h2>Historia transakcji</h2>
+<table th:if="${!transactions.isEmpty()}">
+    <tr>
+        <th>Data</th>
+        <th>Typ</th>
+        <th>Kwota</th>
+        <th>Wykonane przez</th>
+    </tr>
+    <!--
+        TODO 20: Dodaj iteracje po liscie transakcji.
+        Uzyj: <tr th:each="t : ${transactions}">
+        Dla kazdej transakcji wyswietl w <td>:
+          - t.createdAt (sformatowana: #temporals.format(t.createdAt, 'yyyy-MM-dd HH:mm'))
+          - t.type
+          - t.amount (sformatowana + ' PLN')
+          - t.performedBy
+    -->
+</table>
+<p th:if="${transactions.isEmpty()}">Brak transakcji.</p>
+
+<!--
+    TODO 21: Dodaj formularz wylogowania.
+    - Formularz POST kierujacy na /logout
+      Uzyj: th:action="@{/logout}" method="post"
+    - Przycisk "Wyloguj" z class="danger"
+-->
+</body>
+</html>
